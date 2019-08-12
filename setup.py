@@ -6,7 +6,7 @@ from setuptools import setup, find_packages
 with open('README.md', 'rb') as f:
     DESCRIPTION = f.read().decode('utf-8')
 
-with open('timeflux_example/__init__.py') as f:
+with open('timeflux_bci/__init__.py') as f:
     VERSION = re.search('^__version__\s*=\s*\'(.*)\'', f.read(), re.M).group(1)
 
 setup(
