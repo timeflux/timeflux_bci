@@ -1,0 +1,212 @@
+graphs:
+  - id: Broker
+    nodes:
+      - id: proxy
+        module: timeflux.nodes.zmq
+        class: Broker
+    rate: 0
+
+  - id: IO
+    nodes:
+      - id: eeg
+        module: timeflux.nodes.random
+        class: Random
+        params:
+          names: [P7, P4, Cz, Pz, P3, P8, O1, O2]
+          value_min: 0
+          value_max: 100
+          rows_min: 10
+          rows_max: 10
+
+      - id: pub_eeg
+        module: timeflux.nodes.zmq
+        class: Pub
+        params:
+          topic: raw_eeg
+      - id: speller
+        module: timeflux_ui.nodes.ui
+        class: UI
+        params:
+          routes:
+            p300: ../../../timeflux_ui/apps/p300
+      - id: pub_speller
+        module: timeflux.nodes.zmq
+        class: Pub
+        params:
+          topic: sp_events
+      - id: sub
+        module: timeflux.nodes.zmq
+        class: Sub
+        params:
+          topics: [tx_events]
+      - id: display
+        module: timeflux.nodes.debug
+        class: Display
+    edges:
+      - source: eeg
+        target: pub_eeg
+      - source: speller:events
+        target: pub_speller
+      - source: sub:tx_events
+        target: speller:model
+      - source: sub:tx_events
+        target: display
+    rate: 20
+
+  - id: Process
+    nodes:
+      - id: sub
+        module: timeflux.nodes.zmq
+        class: Sub
+        params:
+          topics: [raw_eeg, sp_events]
+
+      - id: pub_tx_events_fit
+        module: timeflux.nodes.zmq
+        class: Pub
+        params:
+          topic: tx_events
+
+      - id: pub_tx_events_prediction
+        module: timeflux.nodes.zmq
+        class: Pub
+        params:
+          topic: tx_events
+
+      - id: dejitter
+        module: timeflux.nodes.dejitter
+        class: Interpolate
+        params:
+          rate: 200
+      - id: epochs
+        module: timeflux.nodes.epoch
+        class: Epoch
+        params:
+          before: 0.0
+          after: 0.6
+          event_trigger: flash_begins
+      - id: to_xarray
+        module: timeflux.nodes.epoch
+        class: ToXArray
+        params:
+          output: DataArray
+          context_key: includes_target
+      - id: gate_training
+        module: timeflux.nodes.gate
+        class: Gate
+        params:
+          event_opens: training_begins
+          event_closes: training_ends
+
+      - id: append_epochs
+        module: timeflux.nodes.accumulate
+        class: AppendDataArray
+        params:
+          dim: target
+          meta_keys: [epochs_context, epochs_onset]
+
+      - id: fit
+        module: timeflux_ml.nodes.fit
+        class: Fit
+        params:
+          has_targets: True
+          pipeline_steps:
+            cov: pyriemann.estimation.ERPCovariances
+            proj: pyriemann.tangentspace.TangentSpace
+            clf: pyriemann.classification.LogisticRegression
+          pipeline_params:
+            cov__estimator: oas
+            proj__metric: riemann
+            clf__solver: lbfgs
+
+      - id: predict
+        module: timeflux_ml.nodes.predict
+        class: PredictProba
+
+#      - id: gate_testing
+#        module: timeflux.nodes.gate
+#        class: Gate
+#        params:
+#          event_opens: testing_begins
+#          event_closes: testing_ends
+
+      - id: gate_testing
+        module: timeflux.nodes.gate
+        class: Gate
+        params:
+          event_opens: block_begins
+          event_closes: block_ends
+
+      - id: append_predictions
+        module: timeflux.nodes.accumulate
+        class: AppendDataFrame
+        params:
+          meta_keys: [epochs_context, epochs_onset]
+
+      - id: inference
+        module: timeflux_bci.nodes.p300
+        class: NaiveBayesInference
+
+      - id: display
+        module: timeflux.nodes.debug
+        class: Display
+    edges:
+      - source: sub:raw_eeg
+        target: dejitter
+      - source: dejitter
+        target: epochs
+      - source: sub:sp_events
+        target: epochs:events
+      - source: epochs:*
+        target: to_xarray
+      - source: to_xarray
+        target: gate_training
+      - source: sub:sp_events
+        target: gate_training:events
+      - source: gate_training
+        target: append_epochs
+      - source: append_epochs
+        target: fit
+      - source: fit:events
+        target: pub_tx_events_fit
+      - source: fit:model
+        target: predict:model
+      - source: to_xarray
+        target: predict
+      - source: sub:sp_events
+        target: gate_testing:events
+      - source: predict
+        target: gate_testing
+      - source: gate_testing
+        target: append_predictions
+      - source: sub:sp_events
+        target: inference:events
+      - source: append_predictions
+        target: inference
+      - source: inference:events
+        target: pub_tx_events_prediction
+
+  - id: Recorder
+    nodes:
+    - id: sub
+      module: timeflux.nodes.zmq
+      class: Sub
+      params:
+        topics: [raw_eeg, sp_events]
+    - id: save
+      module: timeflux.nodes.hdf5
+      class: Save
+      params:
+        path: '/Users/raph/OMIND_SERVER/DATA/DATA_testing/random_p300'
+        min_itemsize: 2000
+
+    - id: display
+      module: timeflux.nodes.debug
+      class: Display
+
+    edges:
+    - source: sub:raw_eeg
+      target: save:raw_eeg
+    - source: sub:sp_events
+      target: save:events_speller
+    rate: 1
