@@ -67,6 +67,12 @@ graphs:
         params:
           topic: tx_events
 
+      - id: pub_tx_events_cv
+        module: timeflux.nodes.zmq
+        class: Pub
+        params:
+          topic: tx_events
+
       - id: pub_tx_events_prediction
         module: timeflux.nodes.zmq
         class: Pub
@@ -119,16 +125,23 @@ graphs:
             proj__metric: riemann
             clf__solver: lbfgs
 
+      - id: cv
+        module: timeflux_ml.nodes.cross_validate
+        class: CrossValidate
+        params:
+          pipeline_steps:
+            cov: pyriemann.estimation.ERPCovariances
+            proj: pyriemann.tangentspace.TangentSpace
+            clf: pyriemann.classification.LogisticRegression
+          pipeline_params:
+            cov__estimator: oas
+            proj__metric: riemann
+            clf__solver: lbfgs
+
       - id: predict
         module: timeflux_ml.nodes.predict
         class: PredictProba
 
-#      - id: gate_testing
-#        module: timeflux.nodes.gate
-#        class: Gate
-#        params:
-#          event_opens: testing_begins
-#          event_closes: testing_ends
 
       - id: gate_testing
         module: timeflux.nodes.gate
@@ -167,6 +180,10 @@ graphs:
         target: append_epochs
       - source: append_epochs
         target: fit
+      - source: append_epochs
+        target: cv
+      - source: cv:events
+        target: pub_tx_events_cv
       - source: fit:events
         target: pub_tx_events_fit
       - source: fit:model
