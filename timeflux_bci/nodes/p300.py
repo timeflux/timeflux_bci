@@ -7,7 +7,7 @@ from timeflux.core.node import Node
 
 
 class NaiveBayesInference(Node):
-    """ Target prediction using a Naive Bayesian Inference
+    r""" Target prediction using a Naive Bayesian Inference
 
     This node should be plugged after a node 'PredictProba'. In th case of p300,
     there are two class: False (non-target) and True (target). The expected data
@@ -17,22 +17,30 @@ class NaiveBayesInference(Node):
     Let Ait be the set of symbols illuminated for the ith flash for symbol t in the sequence,
     we define flash scores as follows:
 
-    f(yit∣xt)=⎧ p(yi, True) if xt ∈ Ait
-              ⎨
-              ⎩ p(yi, False) if xt ∉ Ait
+    .. math::
+
+        \begin{equation}
+            f(yit∣xt)=
+                \begin{cases}
+                    p(yi, True),  \text{if xt ∈ Ait}. \\
+                    p(yi, False), \text{if xt ∉ Ait}.
+                \end{cases}
+        \end{equation}
 
     A Naive Bayes classifier is used to determine the probability of each symbol
     given the flash scores and the previous decisions.
 
     Let us remind Bayes' theorem:
-    $$ P(A \mid B) = \rac{P(B \mid A) \, P(A)}{P(B)} $$
+
+    .. math:: P(A \mid B) = \frac{P(B \mid A) \, P(A)}{P(B)}
 
     If we assume that the individual flashes are conditionally independent given
     the current attended character, the posterior probability is:
 
-    $$ P(xt \mid yt,xt−1,…,x0) = \frac{P(yt,xt−1,…,x0 \mid xt) \, P(xt)}{P(yt,xt−1,…,x0)} $$
+    .. math::
 
-    $$                         =  \frac{1}{Z} \prod_{i} f(yit∣xt) $$
+        P(xt \mid yt,xt−1,…,x0) &= \frac{P(yt,xt−1,…,x0 \mid xt) \, P(xt)}{P(yt,xt−1,…,x0)} \\
+                                &= \frac{1}{Z} \prod_{i} f(yit∣xt)
 
     We estimate the constant Z at each iteration (ie. each flash, ie. each row),
     as the sum of all posteriors (so that the vector of probability has a sum of 1).
@@ -41,10 +49,11 @@ class NaiveBayesInference(Node):
     with greater posterior probability and returns an event with  data ('target', 'precision' )
 
     Args:
-            event_label (string): The column to match for event_trigger.
-            event_data (string, None): The column where meta-data is stored.
-            event_label_config (string): The marker name on which the node sets its config (ie. nb of repetitions, targets ids...)
-            event_label_prediction (string): The marker name of the output events stream when a prediction is made.
+        event_label (string): The column to match for event_trigger.
+        event_data (string, None): The column where meta-data is stored.
+        event_label_config (string): The marker name on which the node sets its config (ie. nb of repetitions, targets ids...)
+        event_label_prediction (string): The marker name of the output events stream when a prediction is made.
+
     """
 
     def __init__(self,
