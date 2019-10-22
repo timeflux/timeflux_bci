@@ -214,7 +214,6 @@ graphs:
       module: timeflux.nodes.hdf5
       class: Save
       params:
-        path: '/Users/raph/OMIND_SERVER/DATA/DATA_testing/random_p300'
         min_itemsize: 2000
 
     - id: display
