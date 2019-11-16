@@ -85,7 +85,6 @@ graphs:
           frequencies:
             - 1
             - 30
-          mode: bandpass
 
       - id: pub_tx_events_fit
         module: timeflux.nodes.zmq

@@ -17,6 +17,19 @@ graphs:
         class: Pub
         params:
           topic: raw_eeg
+      - id: speller
+        module: timeflux_ui.nodes.ui
+        class: UI
+        params:
+          routes:
+            p300: ../../timeflux/timeflux_ui/apps/p300
+      - id: pub_speller
+        module: timeflux.nodes.zmq
+        class: Pub
+        params:
+          topic: sp_events
     edges:
       - source: sub:raw_eeg
         target: pub_eeg
+      - source: speller
+        target: pub_speller
