@@ -4,7 +4,7 @@ graphs:
         module: timeflux.nodes.hdf5
         class: Replay
         params:
-          filename: /Users/raph/OMIND_SERVER/DATA/DATA_testing/P300/enobio/js_speller/20191022-172615.hdf5
+          filename: .data/test.hdf5
           keys:
             - /eeg/raw
             - /events/speller
