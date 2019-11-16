@@ -1,0 +1,22 @@
+graphs:
+  - id: Enobio
+    nodes:
+      - id: enobio
+        module: timeflux.nodes.lsl
+        class: Receive
+        params:
+          name: enobio-EEG
+          unit: s
+          offset_correction: true
+          channels: [P7, P4, Cz, Pz, P3, P8, O1, O2, T8, F8, C4, F4, Fp2, Fz, C3,
+                     F3, Fp1, T7, F7, Oz, PO4, FC6, FC2, AF4, CP6, CP2, CP1, CP5,
+                     FC1, FC5, AF3, PO3]
+
+      - id: pub_eeg
+        module: timeflux.nodes.zmq
+        class: Pub
+        params:
+          topic: raw_eeg
+    edges:
+      - source: sub:raw_eeg
+        target: pub_eeg

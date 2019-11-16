@@ -1,0 +1,37 @@
+graphs:
+  - nodes:
+      - id: replay
+        module: timeflux.nodes.hdf5
+        class: Replay
+        params:
+          filename: /Users/raph/OMIND_SERVER/DATA/DATA_testing/P300/enobio/js_speller/20191022-172615.hdf5
+          keys:
+            - /eeg/raw
+            - /events/speller
+
+          timespan: 0.1
+          resync: False
+
+      - id: pub_eeg
+        module: timeflux.nodes.zmq
+        class: Pub
+        params:
+          topic: raw_eeg
+      - id: pub_events
+        module: timeflux.nodes.zmq
+        class: Pub
+        params:
+          topic: sp_events
+
+      - id: display
+        module: timeflux.nodes.debug
+        class: Display
+
+    edges:
+      - source: replay:eeg_raw
+        target: pub_eeg
+      - source: replay:events_speller
+        target: pub_events
+#      - source: replay:events_speller
+#        target: display
+    rate: 0

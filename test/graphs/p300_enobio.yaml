@@ -9,14 +9,14 @@ graphs:
   - id: IO
     nodes:
       - id: eeg
-        module: timeflux.nodes.random
-        class: Random
+        module: timeflux.nodes.lsl
+        class: Receive
         params:
-          names: [P7, P4, Cz, Pz, P3, P8, O1, O2]
-          value_min: 0
-          value_max: 100
-          rows_min: 10
-          rows_max: 10
+          name: enobio-EEG
+          unit: s
+          offset_correction: true
+          channels: [P7, P4, Cz, Pz, P3, P8, O1, O2, T8, F8, C4, F4, Fp2, Fz, C3, F3, Fp1, T7, F7, Oz, PO4, FC6, FC2, AF4, CP6, CP2, CP1, CP5, FC1, FC5, AF3, PO3]
+
 
       - id: pub_eeg
         module: timeflux.nodes.zmq
@@ -61,6 +61,32 @@ graphs:
         params:
           topics: [raw_eeg, sp_events]
 
+
+      - id: notch
+        module: timeflux_dsp.nodes.filters
+        class: IIRLineFilter
+        params:
+          rate: 500
+#
+#      - id: notch
+#        module: timeflux_dsp.nodes.filters
+      # - id: droprows
+      #   module: timeflux_dsp.nodes.filters
+      #   class: DropRows
+      #   params:
+      #     factor: 10
+          
+      - id: bandpass
+        module: timeflux_dsp.nodes.filters
+        class: IIRFilter
+        params:
+          rate: 500
+          order: 3
+          frequencies:
+            - 1
+            - 30
+          mode: bandpass
+
       - id: pub_tx_events_fit
         module: timeflux.nodes.zmq
         class: Pub
@@ -79,11 +105,17 @@ graphs:
         params:
           topic: tx_events
 
+      - id: pub_eeg
+        module: timeflux.nodes.zmq
+        class: Pub
+        params:
+          topic: filtered_eeg
+
       - id: dejitter
         module: timeflux.nodes.dejitter
         class: Interpolate
         params:
-          rate: 200
+          rate: 50
       - id: epochs
         module: timeflux.nodes.epoch
         class: Epoch
@@ -111,22 +143,19 @@ graphs:
           dim: target
           meta_keys: [epochs_context, epochs_onset]
 
-      - id: reshape_epochs
-        module: timeflux.nodes.xarray
-        class: Transpose
-        params:
-          dims: [target, space, time]
-
       - id: fit
         module: timeflux_ml.nodes.fit
         class: Fit
         params:
           has_targets: True
           pipeline_steps:
+            removeflat : pyriemann.channelselection.FlatChannelRemover
+            selectchann: pyriemann.channelselection.ElectrodeSelection
             cov: pyriemann.estimation.ERPCovariances
             proj: pyriemann.tangentspace.TangentSpace
             clf: pyriemann.classification.LogisticRegression
           pipeline_params:
+            selectchann__nelec: 8
             cov__estimator: oas
             proj__metric: riemann
             clf__solver: lbfgs
@@ -136,10 +165,13 @@ graphs:
         class: CrossValidate
         params:
           pipeline_steps:
+            removeflat: pyriemann.channelselection.FlatChannelRemover
+            selectchann: pyriemann.channelselection.ElectrodeSelection
             cov: pyriemann.estimation.ERPCovariances
             proj: pyriemann.tangentspace.TangentSpace
             clf: pyriemann.classification.LogisticRegression
           pipeline_params:
+            selectchann__nelec: 8
             cov__estimator: oas
             proj__metric: riemann
             clf__solver: lbfgs
@@ -171,7 +203,17 @@ graphs:
         class: Display
     edges:
       - source: sub:raw_eeg
+        target: droprows
+      - source: droprows
+        target: notch
+      - source: notch
+        target: bandpass
+      - source: bandpass
         target: dejitter
+      - source: dejitter
+        target: pub_eeg
+#      - source: dejitter
+#        target: display
       - source: dejitter
         target: epochs
       - source: sub:sp_events
@@ -179,8 +221,6 @@ graphs:
       - source: epochs:*
         target: to_xarray
       - source: to_xarray
-        target: reshape_epochs
-      - source: reshape_epochs
         target: gate_training
       - source: sub:sp_events
         target: gate_training:events
@@ -196,7 +236,7 @@ graphs:
         target: pub_tx_events_fit
       - source: fit:model
         target: predict:model
-      - source: reshape_epochs
+      - source: to_xarray
         target: predict
       - source: sub:sp_events
         target: gate_testing:events
@@ -217,7 +257,7 @@ graphs:
       module: timeflux.nodes.zmq
       class: Sub
       params:
-        topics: [raw_eeg, sp_events]
+        topics: [raw_eeg, filtered_eeg, sp_events, tx_events]
     - id: save
       module: timeflux.nodes.hdf5
       class: Save
@@ -229,8 +269,12 @@ graphs:
       class: Display
 
     edges:
+    - source: sub:filtered_eeg
+      target: save:eeg_filtered
     - source: sub:raw_eeg
-      target: save:raw_eeg
+      target: save:eeg_raw
     - source: sub:sp_events
       target: save:events_speller
+    - source: sub:tx_events
+      target: save:events_timeflux
     rate: 1
