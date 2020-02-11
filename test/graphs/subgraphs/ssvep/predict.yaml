@@ -64,7 +64,7 @@ graphs:
         module: timeflux.nodes.zmq
         class: Pub
         params:
-          topic: predictions
+          topic: events   #predictions
 
       #      - id: pub_eeg_bands
       #        module: timeflux.nodes.zmq

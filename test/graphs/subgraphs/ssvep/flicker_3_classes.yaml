@@ -31,14 +31,14 @@ graphs:
       module: timeflux.nodes.zmq
       class: Sub
       params:
-        topics: [ eeg_filtered, predictions ]  # todo should we publish prediction in events instead?
+        topics: [ eeg_filtered, events ]  # todo should we rather publish somewhere else than in `events`?
     edges:
       - source: ui:events
         target: publish
       - source: subscribe:eeg_filtered
         target: ui:eeg
-      - source: subscribe:predictions
-        target: ui:predictions
+      - source: subscribe:events
+        target: ui:events
 
     rate: 30
 
