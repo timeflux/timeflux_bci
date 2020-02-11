@@ -1,0 +1,6 @@
+import:
+  - subgraphs/p300_legacy/p300_common.yaml
+  - subgraphs/p300_legacy/p300_pipeline.yaml
+  - subgraphs/replay.yaml
+#  - subgraphs/enonio.yaml
+#  - subgraphs/random.yaml
