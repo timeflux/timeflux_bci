@@ -1,0 +1,8 @@
+import:
+#  - subgraphs/ssvep/flicker_3_classes.yaml
+  - subgraphs/ssvep/predict.yaml
+  - subgraphs/broker.yaml
+  - subgraphs/replay.yaml
+#  - subgraphs/devices/unicorn.yaml
+#  - subgraphs/devices/cython.yaml
+  - subgraphs/ssvep/record.yaml
