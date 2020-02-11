@@ -21,10 +21,12 @@ dependencies:
 - sphinx_rtd_theme>=0.4
 - python-graphviz>=0.13
 - pip>=19.3
+- matplotlib # Needed, since this package is missing in pyriemann setup dependencies
 - pip:
   - pyriemann
-#  - pylsl>=1.13.1
-  - python.7.0
-  - git+https://github.com/timeflux/timeflux@dfb2246#egg=timeflux
+#  - pylsl>=1.13.1c
+  - git+https://github.com/timeflux/timeflux@04706f5#egg=timeflux
   - git+https://github.com/timeflux/timeflux_dsp
   - git+https://github.com/timeflux/timeflux_ui
+  - git+https://github.com/timeflux/timeflux_ui
+  - git+https://github.com/timeflux/timeflux_openbci
