@@ -1,0 +1,58 @@
+graphs:
+  - id: UI
+    nodes:
+    - id: ui
+      module: timeflux_ui.nodes.ui
+      class: UI
+      params:
+        routes:
+          flicker: flicker
+        settings:
+          flicker:
+            grid:
+              rows: 5
+              columns: 9
+            calibration:
+              baseline_duration: 60000
+              focus_duration: 7000
+              rounds: 8
+            highlight_duration: 3000
+            targets:
+              cell_0_0: 13
+              cell_0_8: 17
+              cell_2_4: 0
+              cell_4_4: 21
+    - id: publish
+      module: timeflux.nodes.zmq
+      class: Pub
+      params:
+        topic: events
+    - id: subscribe
+      module: timeflux.nodes.zmq
+      class: Sub
+      params:
+        topics: [ eeg_filtered, predictions ]  # todo should we publish prediction in events instead?
+    edges:
+      - source: ui:events
+        target: publish
+      - source: subscribe:eeg_filtered
+        target: ui:eeg
+      - source: subscribe:predictions
+        target: ui:predictions
+
+    rate: 30
+
+  - id: display
+    nodes:
+    - id: subscribe
+      module: timeflux.nodes.zmq
+      class: Sub
+      params:
+        topics: [ events ]
+    - id: debug
+      module: timeflux.nodes.debug
+      class: Display
+    edges:
+      - source: subscribe:events
+        target: debug
+    rate: 1

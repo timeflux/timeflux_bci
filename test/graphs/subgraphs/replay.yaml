@@ -1,0 +1,45 @@
+graphs:
+  - nodes:
+      - id: replay
+        module: timeflux.nodes.hdf5
+        class: Replay
+        params:
+         # filename: '/Users/raph/OMIND_SERVER/DATA/DATA_testing/oddball/unicorn/replay/oddball_pierre_20191129-131954.hdf5'
+          filename: /Users/raph/Data/SSVEP_EXO/subject12_run2_raw.hdf5
+          keys:
+            - /eeg #/raw
+            - /events #/speller
+          speed: 1
+          resync: False
+
+      - id: pub_eeg
+        module: timeflux.nodes.zmq
+        class: Pub
+        params:
+          topic: eeg_raw
+
+      - id: deserialize
+        module: timeflux_bci.nodes.serialize
+        class: DeserializeColumn
+
+      - id: pub_events
+        module: timeflux.nodes.zmq
+        class: Pub
+        params:
+          topic: events #sp_events
+
+      - id: display
+        module: timeflux.nodes.debug
+        class: Display
+
+    edges:
+      - source: replay:eeg #eeg_raw
+        target: pub_eeg
+      - source: replay:events  #events_speller
+        target: deserialize
+      - source: deserialize
+        target: pub_events
+
+#      - source: replay:eeg #_speller
+#        target: display
+    rate: 0
