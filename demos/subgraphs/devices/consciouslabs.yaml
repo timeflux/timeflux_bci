@@ -1,0 +1,36 @@
+graphs:
+
+  - id: ConsciousLabs
+    nodes:
+    - id: acquire
+      module: timeflux.nodes.lsl
+      class: Receive
+      params:
+        prop: name
+        value: ConsciousLabs
+        sync: network
+    - id: bandpass
+      module: timeflux_dsp.nodes.filters
+      class: IIRFilter
+      params:
+        rate: 250
+        order: 3
+        frequencies: [1, 40]
+    - id: pub_raw
+      module: timeflux.nodes.zmq
+      class: Pub
+      params:
+        topic: eeg_raw
+    - id: pub_filtered
+      module: timeflux.nodes.zmq
+      class: Pub
+      params:
+        topic: eeg_filtered
+    edges:
+    - source: acquire
+      target: pub_raw
+    - source: acquire
+      target: bandpass
+    - source: bandpass
+      target: pub_filtered
+    rate: 10
