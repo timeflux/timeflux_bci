@@ -1,5 +1,6 @@
 """Handle meta """
 
+import json
 from timeflux.helpers.port import match_events
 from timeflux.core.node import Node
 
@@ -32,7 +33,10 @@ class BetweenEvents(Node):
             matches = match_events(self.i_events, self.event_start)
             if matches is not None:
                 # todo: what if multiple matches in same chunk?
-                self._context = {'context': matches.data.values[0]}
+                match = matches.data.values[0]
+                if isinstance(matches.data.values[0], str):
+                    match = json.loads(match)
+                self._context = {'context': match}
                 self._spreading = True
         else:
             # look for `event_stop`
