@@ -32,7 +32,7 @@ graphs:
         module: timeflux.nodes.ml
         class: Pipeline
         params:
-          mode: predict
+          mode: predict_proba #predict_proba
           event_start_accumulation: calibration_starts
           event_stop_accumulation: calibration_stops
           event_start_training: calibration_stops
@@ -57,15 +57,33 @@ graphs:
               class: Covariances
               args:
                 estimator: lwf
-            - module: pyriemann.classification
-              class: MDM
-          dimensions: 3
+            - module: pyriemann.tangentspace
+              class: TangentSpace
+            - module: timeflux_bci.estimators.classifiers.linear
+              class: RidgeClassifier
+#            - module: sklearn.linear_model
+#              class: LogisticRegression
+#            - module: pyriemann.classification
+#              class: MDM
+#          dimensions: 3
+      - id: inference
+        module: timeflux_bci.nodes.inference
+        class: NaiveBayesInference
+        params:
+          reset_label: calibration-focus_starts
+          threshold: .99
+
       - id: pub_predictions
         module: timeflux.nodes.zmq
         class: Pub
         params:
           topic: events   #predictions
 
+      - id: pub_inferences
+        module: timeflux.nodes.zmq
+        class: Pub
+        params:
+          topic: events
       #      - id: pub_eeg_bands
       #        module: timeflux.nodes.zmq
       #        class: Pub
@@ -95,16 +113,18 @@ graphs:
       - source: sub:events
         target: fit_predict:events
       - source: add_context
-        target: fit_predict:training # todo: get rid of this artificial port name
+        target: fit_predict:training_1
       - source: window
-        target: fit_predict # todo: get rid of this artificial port name
+        target: fit_predict:1 # todo: get rid of this artificial port name
       - source: fit_predict:events
         target: pub_predictions
 
-      - source: fit_predict:events
-        target: display1
       - source: sub:events
-        target: display2
+        target: inference:events
+      - source: inference:events
+        target: display1
+      - source: inference:events
+        target: pub_inferences
 
 #      - source: filter_bank
 #        target: pub_eeg_bands

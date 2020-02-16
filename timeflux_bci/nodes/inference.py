@@ -47,12 +47,13 @@ class NaiveBayesInference(Node):
         if self._reset_label is not None:
             # todo: allow multiple reset_label
             reset_matches = match_events(self.i_events, self._reset_label)
+            # todo: freeze for a short period to allow brain warm up?
             if reset_matches is not None:
                 # reset prior and classes
                 self._classes = None
         predict_matches = match_events(self.i_events, 'predict_proba')
-        predict_data = predict_matches.data.apply(json.loads).values
         if predict_matches is not None:
+            predict_data = predict_matches.data.apply(json.loads).values
             if self._classes is None:
                 # infer number of class from prediction result length
                 self._classes = predict_data[0]['classes']
@@ -66,8 +67,6 @@ class NaiveBayesInference(Node):
                 self._logprobs += np.log(prob)
                 # normalize probs
                 self._logprobs = np.log(np.exp(self._logprobs) / np.sum(np.exp(self._logprobs)))
-
-            print(self._logprobs)
             if any(self._logprobs >= self._threshold):
                 idxmax = np.argmax(self._logprobs)
                 # todo: decide on a serialize policy for events'data
