@@ -1,0 +1,111 @@
+graphs:
+  - id: IO
+    nodes:
+      - id: sub
+        module: timeflux.nodes.zmq
+        class: Sub
+        params:
+          topics: [eeg, events]
+      - id: filter_bank
+        module: timeflux_bci.nodes.ssvep
+        class: FilterBank
+        params:
+          filters:  # todo: depends on flickering frequencies!
+            '7': {frequencies: [6.9, 7.1], order: 1}
+            '30': {frequencies: [29.9, 30.1], order: 1}
+          rate: 250
+          design: butter
+      - id: add_context
+        module: timeflux_bci.nodes.context
+        class: BetweenEvents
+        params:
+          event_start: calibration-focus_starts
+          event_stop: calibration-focus_stops
+      - id: window
+        module: timeflux.nodes.window
+        class: FixedWindow
+        params: # todo: to be refined!
+          length: 125 # todo :  depends on EEG rate!
+          step: 62
+      - id: fit_predict
+        module: timeflux.nodes.ml
+        class: Pipeline
+        params:
+          mode: predict
+          event_start_accumulation: calibration_starts
+          event_stop_accumulation: calibration_stops
+          event_start_training: calibration_stops
+          meta_label: [context, frequency]
+          steps:
+            #            - module: timeflux.estimators.transformers.shape
+            #              class: Expand
+            - module: timeflux_bci.estimators.transformers.shape
+              class: Swapaxes
+              args:
+                axis1: 1 # channels
+                axis2: 2 # samples
+            #            - module: timeflux_bci.estimators.transformers.filtfilt
+            #              class: FiltFilt
+            #              args:
+            #                rate: 256 # todo:  rather get from meta
+            #                frequencies: [13, 17, 21] # todo: depends on flickering frequencies!
+            #                band_width: 1
+            #                design_kwargs:
+            #                  order: 6
+            - module: pyriemann.estimation
+              class: Covariances
+              args:
+                estimator: lwf
+            - module: pyriemann.classification
+              class: MDM
+          dimensions: 3
+      - id: pub_predictions
+        module: timeflux.nodes.zmq
+        class: Pub
+        params:
+          topic: events   #predictions
+
+      #      - id: pub_eeg_bands
+      #        module: timeflux.nodes.zmq
+      #        class: Pub
+      #        params:
+      #          topic: eeg_bands
+
+      - id: display
+        module: timeflux.nodes.debug
+        class: Display
+      - id: display1
+        module: timeflux.nodes.debug
+        class: Display
+      - id: display2
+        module: timeflux.nodes.debug
+        class: Display
+    edges:
+      - source: sub:eeg_raw
+        target: filter_bank
+      - source: filter_bank
+        target: window
+      - source: window
+        target: add_context
+      - source: sub:events
+        target: add_context:events
+      #      - source: add_context
+      #        target: window
+      - source: sub:events
+        target: fit_predict:events
+      - source: add_context
+        target: fit_predict:training # todo: get rid of this artificial port name
+      - source: window
+        target: fit_predict # todo: get rid of this artificial port name
+      - source: fit_predict:events
+        target: pub_predictions
+
+      - source: fit_predict:events
+        target: display1
+      - source: sub:events
+        target: display2
+
+#      - source: filter_bank
+#        target: pub_eeg_bands
+
+    rate: 20

@@ -1,0 +1,31 @@
+graphs:
+  - id: Broker
+    nodes:
+      - id: proxy
+        module: timeflux.nodes.zmq
+        class: Broker
+    rate: 0
+
+  - id: Recorder
+    nodes:
+      - id: sub
+        module: timeflux.nodes.zmq
+        class: Sub
+        params:
+          topics: [raw_eeg, sp_events]
+      - id: save
+        module: timeflux.nodes.hdf5
+        class: Save
+        params:
+          min_itemsize: 2000
+
+      - id: display
+        module: timeflux.nodes.debug
+        class: Display
+
+    edges:
+      - source: sub:raw_eeg
+        target: save:raw_eeg
+      - source: sub:sp_events
+        target: save:events_speller
+    rate: 1

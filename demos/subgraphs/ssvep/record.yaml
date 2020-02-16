@@ -1,0 +1,33 @@
+graphs:
+  - id: Recorder
+    nodes:
+      - id: sub
+        module: timeflux.nodes.zmq
+        class: Sub
+        params:
+          topics: [eeg, events]
+      - id: save
+        module: timeflux.nodes.hdf5
+        class: Save
+        params:
+          min_itemsize: 50
+          path: data/out/
+
+      - id: serialize
+        module: timeflux_bci.nodes.serialize
+        class: SerializeColumn
+
+      - id: display
+        module: timeflux.nodes.debug
+        class: Display
+
+    edges:
+      - source: sub:eeg_raw
+        target: save:eeg_raw
+      - source: sub:events
+        target: serialize # todo: fix hdf5 save node to allow NaN as events'data
+      - source: serialize
+        target: save:events
+      # - source: sub:eeg_bands
+      #   target: save:eeg_bands
+    rate: 1
