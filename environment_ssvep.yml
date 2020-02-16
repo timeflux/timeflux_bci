@@ -25,7 +25,7 @@ dependencies:
 - pip:
   - pyriemann
 #  - pylsl>=1.13.1c
-  - git+https://github.com/timeflux/timeflux@04706f5#egg=timeflux
+  - git+https://github.com/timeflux/timeflux@85fa071#egg=timeflux
   - git+https://github.com/timeflux/timeflux_dsp
   - git+https://github.com/timeflux/timeflux_ui
   - git+https://github.com/timeflux/timeflux_ui
